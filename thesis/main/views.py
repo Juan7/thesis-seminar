@@ -11,9 +11,10 @@ from .functions import differential_evolution, load_init_data
 
 def home(request):
     """Display home view."""
+    result_data = request.session.get('result_data', {})
 
     context = {
-        'text': 'Hello world!',
+        'result_data': result_data,
     }
     return render(request, 'main/home.html', context)
 
@@ -23,5 +24,5 @@ def run(request):
     data = load_init_data()
     generations = settings.GENERATIONS or 10
     result_data = differential_evolution(generations, data)
-    pprint.pprint(result_data)
+    request.session['result_data'] = result_data
     return redirect(reverse('main:home'))

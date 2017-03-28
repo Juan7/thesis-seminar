@@ -3,6 +3,88 @@
 
 {% block content %}
 
+
+
 <a href="{% url 'main:run' %}" class="button"><i class="fa fa-play"></i>Run</a>
+
+<p>Best: {{ result_data.best }}</p>
+
+<div class="chart">
+  <canvas id="canvas_net" height="75" width="auto"></canvas>
+</div>
+
+
+<script>
+window.onload = function(){
+  var width = $(".chart").width() - 150;
+  var radius = width / (({{ result_data.generations_best|safe|length }} - 1) * 2.0 );
+
+  var dataLabels = [];
+  var dataEarnings = [];
+
+  {% for generation_best in result_data.generations_best %}
+    dataLabels.push('{{ forloop.counter }}');
+    dataEarnings.push({{ generation_best|floatformat:4 }});
+  {% endfor %}
+
+  var data = {
+    "success": true,
+    "labels": dataLabels,
+    "earnings": dataEarnings,
+  };
+
+  var chartConfiguration = {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        data: data.earnings,
+        backgroundColor: "rgba(70, 205, 128, 0.33)",
+        borderColor : "rgba(70, 205, 128, 0.9)",
+      }]
+    },
+    options: {
+      scales: {
+        // xAxes: [{
+        //   type: 'time',
+        //   time: {
+        //     tooltipFormat: 'ddd, ll',
+        //     unitStepSize: {% widthratio result_data.generations_best|length 4 1 %},
+        //     unit: 'day'
+        //   },
+        //   gridLines: {
+        //     display: false,
+        //     drawBorder: false,
+        // },
+        // }],
+        yAxes: [{
+          gridLines: {
+            drawBorder: false,
+          },
+          ticks: {
+            maxTicksLimit: 4,
+            callback: function(value) { return intcomma(value); },
+          }
+        }],
+      },
+      elements: {
+        point: {
+          hitRadius: radius,
+        },
+      },
+      tooltips: {
+        callbacks: {
+          label: function(tooltipItems, data) {
+            return intcomma(tooltipItems.yLabel.toFixed(4));
+          },
+        },
+      },
+    },
+  }
+
+  var earnings_chart = document.getElementById("canvas_net").getContext("2d");
+  window.myChart = new Chart(earnings_chart, chartConfiguration);
+}
+</script>
 
 {% endblock %}
