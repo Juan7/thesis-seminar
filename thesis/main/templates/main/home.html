@@ -2,5 +2,7 @@
 {% load i18n %}
 
 {% block content %}
-{{ text }}
+
+<a href="{% url 'main:run' %}" class="button"><i class="fa fa-play"></i>Run</a>
+
 {% endblock %}
