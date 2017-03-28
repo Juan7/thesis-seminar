@@ -1,0 +1,15 @@
+{% load static from staticfiles %}
+{% load i18n %}
+
+<div class="messages" id="messages">
+  <div class="alert" id="alert-template" style="display: none;">
+    <span class="alert-text"></span>
+    <!-- <a href="javascript:void(0)"><i class="fa fa-times" aria-hidden="true"></i></a> -->
+  </div>
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-onload">
+    {{ message }}
+    <!-- <a href="javascript:void(0)"><i class="fa fa-times" aria-hidden="true"></i></a> -->
+  </div>
+  {% endfor %}
+</div>
