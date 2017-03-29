@@ -24,7 +24,7 @@ def load_init_data():
             data = json.loads(json_data.read()).get('init_data')
     except Exception as e:
         print(e)
-        data = generate_init_data(10, 3)
+        data = generate_init_data(20, 4)
         json_data = json.dumps({'init_data': data})
         init_data = open('../fixtures/init_data.txt','w')
         init_data.write(json_data)
@@ -81,9 +81,51 @@ def get_crossover_data(data, mutate_data):
     return crossover_data
 
 
-def fitness(data):
+def evaluate_multi_fitness(data):
+    """Apply all th fitness we need."""
+    item_1 = data[0:2]
+    item_2 = data[2:4]
+    fitness_item_1 = sum_fitness(item_1)
+    fitness_item_2 = minus_fitness(item_2)
+    return fitness_item_1, fitness_item_2
+
+
+def dominate(item_1_data, item_1_results, item_2_data, item_2_results):
+    """Dominate on arrays."""
+    if item_1_results[0] > item_2_results[0] and item_1_results[1] < item_2_results[1]:
+        return item_1_data
+    elif item_1_results[0] < item_2_results[0] and item_1_results[1] > item_2_results[1]:
+        return item_2_data
+    else:
+        return item_1_data if random() < 0.5 else item_2_data
+
+
+def pareto_optimal(item_1, item_2):
+    """Check what element dominates."""
+    item_1_results = evaluate_multi_fitness(item_1)
+    item_2_results = evaluate_multi_fitness(item_2)
+
+    item_1_data = {'item': item_1, 'fitness': item_1_results}
+    item_2_data = {'item': item_2, 'fitness': item_2_results}
+
+    return dominate(item_1_data, item_1_results, item_2_data, item_2_results)
+
+
+def pareto_compares(item_1, item_2):
+    """Return the compares between 2 arrays."""
+    return item_1[0] > item_2[0] and item_1[1] < item_2[1]
+
+def sum_fitness(data):
     """Fitness function."""
     return sum(item for item in data)
+
+
+def minus_fitness(data):
+    """Fitness function."""
+    diff = 0
+    for item in data:
+        diff -= item
+    return diff
 
 
 def evaluate_fitness(data, crossover_data):
@@ -91,18 +133,19 @@ def evaluate_fitness(data, crossover_data):
     next_generation_data = []
     best = None
     for index, item in enumerate(data):
-        data_fitness = fitness(data[index])
-        crossover_fitness = fitness(crossover_data[index])
-        if data_fitness > crossover_fitness:
-            best_fitness = data_fitness
-            next_genetation_item = data[index]
-        else:
-            best_fitness = crossover_fitness
-            next_genetation_item = crossover_data[index]
+        current_generation_data = pareto_optimal(data[index], crossover_data[index])
+        # data_fitness = fitness(data[index])
+        # crossover_fitness = fitness(crossover_data[index])
+        # if data_fitness > crossover_fitness:
+        #     best_fitness = data_fitness
+        #     next_genetation_item = data[index]
+        # else:
+        #     best_fitness = crossover_fitness
+        #     next_genetation_item = crossover_data[index]
 
-        if not best or best_fitness > best:
-            best = best_fitness
-        next_generation_data.append(next_genetation_item)
+        if not best or pareto_compares(current_generation_data['fitness'], best):
+            best = current_generation_data['fitness']
+        next_generation_data.append(current_generation_data['item'])
     return next_generation_data, best
 
 def differential_evolution(generations, data):
@@ -120,5 +163,7 @@ def differential_evolution(generations, data):
         result_data['generations_best'].append(best)
         if not result_data['best'] or best > result_data['best']:
             result_data['best'] = best
+        print(generation)
+        pprint.pprint(current_data)
         current_data = next_generation_data
     return result_data
