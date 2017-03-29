@@ -2,6 +2,8 @@
 import json
 import pprint
 
+from operator import itemgetter
+
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect, render
@@ -24,7 +26,11 @@ def run(request):
     data = load_init_data()
     generations = settings.GENERATIONS or 10
     result_data = differential_evolution(generations, data)
-    # request.session['result_data'] = result_data
-    print('result')
-    pprint.pprint(result_data)
+
+    for result in result_data['generations']:
+        result.sort(key=lambda x:x['fitness'][0])
+        result = list(reversed(result))
+
+    request.session['result_data'] = result_data
+    # pprint.pprint(result_data)
     return redirect(reverse('main:home'))
