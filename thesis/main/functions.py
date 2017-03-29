@@ -152,6 +152,7 @@ def evaluate_fitness(data, crossover_data):
         next_generation_fitness.append(current_generation_data['fitness'])
     return next_generation_data, next_generation_fitness, best_item, best
 
+
 def differential_evolution(generations, data):
     """Apply differential evolution on a dataset."""
     result_data = {
