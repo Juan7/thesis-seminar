@@ -131,7 +131,9 @@ def minus_fitness(data):
 def evaluate_fitness(data, crossover_data):
     """Get the next generation children using fitness function."""
     next_generation_data = []
+    next_generation_fitness = []
     best = None
+    best_item = None
     for index, item in enumerate(data):
         current_generation_data = pareto_optimal(data[index], crossover_data[index])
         # data_fitness = fitness(data[index])
@@ -145,13 +147,18 @@ def evaluate_fitness(data, crossover_data):
 
         if not best or pareto_compares(current_generation_data['fitness'], best):
             best = current_generation_data['fitness']
+            best_item = current_generation_data['item']
         next_generation_data.append(current_generation_data['item'])
-    return next_generation_data, best
+        next_generation_fitness.append(current_generation_data['fitness'])
+    return next_generation_data, next_generation_fitness, best_item, best
 
 def differential_evolution(generations, data):
     """Apply differential evolution on a dataset."""
     result_data = {
-        'generations_best': [],
+        'generations_best_item': [],
+        'generations_best_fitness': [],
+        'generations': [],
+        # 'generations_fitness': [],
         'best': None,
     }
     current_data = data
@@ -159,11 +166,22 @@ def differential_evolution(generations, data):
     for generation in range(generations):
         mutate_data = get_mutate_data(current_data)
         crossover_data = get_crossover_data(current_data, mutate_data)
-        next_generation_data, best = evaluate_fitness(current_data, crossover_data)
-        result_data['generations_best'].append(best)
+        next_generation_data, next_generation_fitness, best_item, best = evaluate_fitness(current_data, crossover_data)
+
+        generation_data = []
+        for index, item in enumerate(next_generation_data):
+            generation_data.append({
+                'item': next_generation_data[index],
+                'fitness': next_generation_fitness[index],
+            })
+
+        result_data['generations'].append(generation_data)
+        # result_data['generations_fitness'].append(next_generation_fitness)
+        result_data['generations_best_item'].append(best_item)
+        result_data['generations_best_fitness'].append(best)
         if not result_data['best'] or best > result_data['best']:
             result_data['best'] = best
-        print(generation)
-        pprint.pprint(current_data)
+        # print(generation)
+        # pprint.pprint(current_data)
         current_data = next_generation_data
     return result_data
