@@ -24,5 +24,7 @@ def run(request):
     data = load_init_data()
     generations = settings.GENERATIONS or 10
     result_data = differential_evolution(generations, data)
-    request.session['result_data'] = result_data
+    # request.session['result_data'] = result_data
+    print('result')
+    pprint.pprint(result_data)
     return redirect(reverse('main:home'))
