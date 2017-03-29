@@ -29,7 +29,7 @@ def run(request):
 
     for result in result_data['generations']:
         result.sort(key=lambda x:x['fitness'][0])
-        result = list(reversed(result))
+        # result = list(reversed(result))
 
     request.session['result_data'] = result_data
     # pprint.pprint(result_data)
