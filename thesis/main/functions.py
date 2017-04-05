@@ -56,27 +56,42 @@ def scalar_multiply_array(scalar, array):
     return [scalar * array[index] for index, value in enumerate(array)]
 
 
+def mutate_element(index, item, data):
+    """Mutate an elemtn on a dataset."""
+    taken_indexes = [index]
+    index_0 = get_random_diff_than(taken_indexes, data)
+    index_1 = get_random_diff_than(taken_indexes, data)
+    index_2 = get_random_diff_than(taken_indexes, data)
+
+    mutate_vector = sum_array(
+                        data[index_0],
+                        scalar_multiply_array(settings.SCALE_FACTOR, substract_array(data[index_1],data[index_2])))
+    return mutate_vector
+
+
 def get_mutate_data(data):
     """Get mutate data according on differential evolution method."""
     mutate_data = []
     for index, item in enumerate(data):
-        taken_indexes = [index]
-        index_0 = get_random_diff_than(taken_indexes, data)
-        index_1 = get_random_diff_than(taken_indexes, data)
-        index_2 = get_random_diff_than(taken_indexes, data)
-
-        mutate_vector = sum_array(
-                            data[index_0],
-                            scalar_multiply_array(settings.SCALE_FACTOR, substract_array(data[index_1],data[index_2])))
+        mutate_vector = mutate_element(index, item, data)
         mutate_data.append(mutate_vector)
     return mutate_data
+
+
+def crossover_elements(element_1, element_2):
+    """Crossover two elements."""
+    crossover_element = []
+    for index, item in enumerate(element_1):
+        mutate_item = element_1[index] if random() < settings.CROSSOVER_RATE else element_2[index]
+        crossover_element.append(mutate_item)
+    return crossover_element
 
 
 def get_crossover_data(data, mutate_data):
     """Get crossover data."""
     crossover_data = []
     for index, item in enumerate(data):
-        crossover_vector = mutate_data[index] if random() < settings.CROSSOVER_RATE else data[index]
+        crossover_vector = crossover_elements(data[index], mutate_data[index])
         crossover_data.append(crossover_vector)
     return crossover_data
 
@@ -97,10 +112,20 @@ def dominate(item_1_data, item_1_results, item_2_data, item_2_results):
     elif item_1_results[0] < item_2_results[0] and item_1_results[1] > item_2_results[1]:
         return item_2_data
     else:
-        return item_1_data if random() < 0.5 else item_2_data
+        return False
 
+def total_dominate(item_1_data, item_1_results, item_2_data, item_2_results, index, crossover_data):
+    """Force the domination disturbing item."""
+    dominator = dominate(item_1_data, item_1_results, item_2_data, item_2_results)
+    while not dominator:
+        mutate_item = mutate_element(index, item_2_data['item'], crossover_data)
+        crossover_item = crossover_elements(item_2_data['item'], mutate_item)
+        crossover_item_results = evaluate_multi_fitness(crossover_item)
+        crossover_item_data = {'item': crossover_item, 'fitness': crossover_item_results}
+        dominator = dominate(item_1_data, item_1_results, crossover_item_data, crossover_item_results)
+    return dominator
 
-def pareto_optimal(item_1, item_2):
+def pareto_optimal(item_1, item_2, index, crossover_data):
     """Check what element dominates."""
     item_1_results = evaluate_multi_fitness(item_1)
     item_2_results = evaluate_multi_fitness(item_2)
@@ -108,7 +133,7 @@ def pareto_optimal(item_1, item_2):
     item_1_data = {'item': item_1, 'fitness': item_1_results}
     item_2_data = {'item': item_2, 'fitness': item_2_results}
 
-    return dominate(item_1_data, item_1_results, item_2_data, item_2_results)
+    return total_dominate(item_1_data, item_1_results, item_2_data, item_2_results, index, crossover_data)
 
 
 def pareto_compares(item_1, item_2):
@@ -131,58 +156,62 @@ def minus_fitness(data):
 def evaluate_fitness(data, crossover_data):
     """Get the next generation children using fitness function."""
     next_generation_data = []
-    next_generation_fitness = []
-    best = None
-    best_item = None
     for index, item in enumerate(data):
-        current_generation_data = pareto_optimal(data[index], crossover_data[index])
-        # data_fitness = fitness(data[index])
-        # crossover_fitness = fitness(crossover_data[index])
-        # if data_fitness > crossover_fitness:
-        #     best_fitness = data_fitness
-        #     next_genetation_item = data[index]
-        # else:
-        #     best_fitness = crossover_fitness
-        #     next_genetation_item = crossover_data[index]
+        current_generation_data = pareto_optimal(data[index], crossover_data[index], index, crossover_data)
+        next_generation_data.append(current_generation_data)
+    return next_generation_data
 
-        if not best or pareto_compares(current_generation_data['fitness'], best):
-            best = current_generation_data['fitness']
-            best_item = current_generation_data['item']
-        next_generation_data.append(current_generation_data['item'])
-        next_generation_fitness.append(current_generation_data['fitness'])
-    return next_generation_data, next_generation_fitness, best_item, best
+
+def one_dominates_two(item_1_data, item_2_data):
+    """Check if first dominate second."""
+    return (item_1_data['fitness'][0] > item_2_data['fitness'][0]
+            and item_1_data['fitness'][1] < item_2_data['fitness'][1])
+
+
+def pareto_dominance(item, data):
+    """Check if an item has another who dominates it."""
+    for current_item in data:
+        if one_dominates_two(current_item, item)
+
+def calculate_pareto_frontier(generation_data, result_data):
+    """Remove the dominated items."""
+    index = 0
+    for target_index, generation_item in enumerate(generation_data):
+
+
+    if not any(one_dominates_two(pareto_item, generation_item) for pareto_item in result_data['pareto_frontier'])
+        result_data['pareto_frontier'].append(generation_item)
+
 
 
 def differential_evolution(generations, data):
     """Apply differential evolution on a dataset."""
     result_data = {
-        'generations_best_item': [],
-        'generations_best_fitness': [],
+        # 'generations_best_item': [],
+        # 'generations_best_fitness': [],
         'generations': [],
+        'pareto_frontier': [],
         # 'generations_fitness': [],
         'best': None,
     }
     current_data = data
+    init_generation_data = []
+    for current_item in current_data:
+        current_item_results = evaluate_multi_fitness(current_item)
+        current_item_data = {'item': current_item, 'fitness': current_item_results}
+        init_generation_data.append(current_item_data)
 
+    calculate_pareto_frontier(init_generation_data, result_data)
     for generation in range(generations):
         mutate_data = get_mutate_data(current_data)
         crossover_data = get_crossover_data(current_data, mutate_data)
-        next_generation_data, next_generation_fitness, best_item, best = evaluate_fitness(current_data, crossover_data)
+        generation_data = evaluate_fitness(current_data, crossover_data)
 
-        generation_data = []
+        next_generation_data = []
         for index, item in enumerate(next_generation_data):
-            generation_data.append({
-                'item': next_generation_data[index],
-                'fitness': next_generation_fitness[index],
-            })
+            next_generation_data.append(next_generation_data['item'])
 
-        result_data['generations'].append(generation_data)
-        # result_data['generations_fitness'].append(next_generation_fitness)
-        result_data['generations_best_item'].append(best_item)
-        result_data['generations_best_fitness'].append(best)
-        if not result_data['best'] or best > result_data['best']:
-            result_data['best'] = best
-        # print(generation)
-        # pprint.pprint(current_data)
+
+
         current_data = next_generation_data
     return result_data
