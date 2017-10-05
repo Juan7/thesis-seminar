@@ -2,6 +2,7 @@
 
 import json
 import pprint
+from statistics import mean
 
 from random import random, uniform, randint
 
@@ -117,15 +118,16 @@ def pareto_compares(item_1, item_2):
 
 def sum_fitness(data):
     """Fitness function."""
-    return sum(item for item in data)
+    return sum(item for item in data) / mean(data)
+#    return sum(item for item in data)
 
 
 def minus_fitness(data):
     """Fitness function."""
-    diff = 0
-    for item in data:
-        diff -= item
-    return diff
+#    diff = 0
+#    for item in data:
+#        diff -= item
+    return mean(data)
 
 
 def evaluate_fitness(data, crossover_data):
@@ -153,36 +155,129 @@ def evaluate_fitness(data, crossover_data):
     return next_generation_data, next_generation_fitness, best_item, best
 
 
+def get_random_indexes(index, item):
+    taken_indexes = [index]
+    first_index = randint(0, len(item) - 1)
+    while first_index in taken_indexes:
+        first_index = randint(0, len(item) - 1)
+    taken_indexes.append(first_index)
+    second_index = randint(0, len(item) - 1)
+    while second_index in taken_indexes:
+        second_index = randint(0, len(item) - 1)
+    taken_indexes.append(second_index)
+    return first_index, second_index
+
+
+def get_new_item(index, item, data):
+    first_index, second_index = get_random_indexes(index, data)
+    mutate_vector = sum_array(
+        data[index],
+        scalar_multiply_array(settings.SCALE_FACTOR, substract_array(data[first_index],data[second_index])))
+    crossover_vector = get_crossover_data(item, mutate_vector)
+    return crossover_vector
+
+def dominance(item, crossover_vector):
+    result = {
+        'state': False,
+        'vector': None,
+        'position': 0
+    }
+    
+    item_fitness_1 = sum_fitness(item)
+    item_fitness_2 = minus_fitness(item)
+    crossover_vector_fitness_1 = sum_fitness(crossover_vector)
+    crossover_vector_fitness_2 = minus_fitness(crossover_vector)
+    
+    if item_fitness_1 < crossover_vector_fitness_1 and item_fitness_2 < crossover_vector_fitness_2:
+        result['state'] = True
+        result['vector'] = item
+        result['position'] = 1
+    if crossover_vector_fitness_1 < item_fitness_1 and crossover_vector_fitness_2 < item_fitness_2:
+        result['state'] = True
+        result['vector'] = crossover_vector
+        result['position'] = 2
+    return result
+
+def update_pareto_frontier(current, pareto_frontier):
+    win = True
+    new_frontier = []
+    for pareto in pareto_frontier:
+        dominance_data = dominance(current, pareto)
+        if not dominance_data['state']:
+            continue
+        if dominance_data['position'] == 2:
+            win = False
+
+    if win:
+        for pareto in pareto_frontier:
+            dominance_data = dominance(current, pareto)
+            if dominance_data['position'] == 1:
+                continue
+            else:
+                new_frontier.append(pareto)
+        new_frontier.append(current)
+    else:
+        new_frontier = list(pareto_frontier)
+        
+    b_set = set(tuple(x) for x in new_frontier)
+    b = [ list(x) for x in b_set ]
+    return b
+
+
+def fitness_vector(pareto_frontier):
+    fitness_data = []
+    for pareto in pareto_frontier:
+        fitness_data.append((sum_fitness(pareto), minus_fitness(pareto)))
+    return fitness_data
+
+
 def differential_evolution(generations, data):
     """Apply differential evolution on a dataset."""
     result_data = {
-        'generations_best_item': [],
-        'generations_best_fitness': [],
         'generations': [],
-        # 'generations_fitness': [],
+        'pareto_frontier': [],
         'best': None,
     }
     current_data = data
 
+    pareto_frontier = []
+    result_data['generations'].append(fitness_vector(current_data))
     for generation in range(generations):
-        mutate_data = get_mutate_data(current_data)
-        crossover_data = get_crossover_data(current_data, mutate_data)
-        next_generation_data, next_generation_fitness, best_item, best = evaluate_fitness(current_data, crossover_data)
-
-        generation_data = []
-        for index, item in enumerate(next_generation_data):
-            generation_data.append({
-                'item': next_generation_data[index],
-                'fitness': next_generation_fitness[index],
-            })
-
-        result_data['generations'].append(generation_data)
-        # result_data['generations_fitness'].append(next_generation_fitness)
-        result_data['generations_best_item'].append(best_item)
-        result_data['generations_best_fitness'].append(best)
-        if not result_data['best'] or best > result_data['best']:
-            result_data['best'] = best
+        print(generation)
+        next_generation_data = []
+        for index, item in enumerate(current_data):
+            crossover_vector = get_new_item(index, item, current_data)
+            dominance_data = dominance(item, crossover_vector)
+            while not dominance_data['state']:
+                crossover_vector = get_new_item(index, crossover_vector, current_data)
+                dominance_data = dominance(item, crossover_vector)
+            winner_vector = dominance_data['vector']
+            next_generation_data.append(winner_vector)
+            pareto_frontier = update_pareto_frontier(winner_vector, pareto_frontier)
+        current_data = next_generation_data
+#        dominating = dominate(current_data, crossover_data)
+#        mutate_data = get_mutate_data(current_data)
+#        crossover_data = get_crossover_data(current_data, mutate_data)
+#        next_generation_data, next_generation_fitness, best_item, best = evaluate_fitness(current_data, crossover_data)
+        
+        
+#        generation_data = []
+#        for index, item in enumerate(next_generation_data):
+#            generation_data.append({
+#                'item': next_generation_data[index],
+#                'fitness': next_generation_fitness[index],
+#            })
+#
+#        result_data['generations'].append(generation_data)
+#        # result_data['generations_fitness'].append(next_generation_fitness)
+#        result_data['generations_best_item'].append(best_item)
+#        result_data['generations_best_fitness'].append(best)
+#        if not result_data['best'] or best > result_data['best']:
+#            result_data['best'] = best
         # print(generation)
         # pprint.pprint(current_data)
-        current_data = next_generation_data
+#        current_data = next_generation_data
+    result_data['generations'].append(fitness_vector(pareto_frontier))
+    import pprint
+    pprint.pprint(result_data)
     return result_data

@@ -7,8 +7,6 @@
 
 <a href="{% url 'main:run' %}" class="button"><i class="fa fa-play"></i>Run</a>
 
-<p>Best: {{ result_data.best }}</p>
-
 <div class="chart">
   <canvas id="canvas_net" height="75" width="auto"></canvas>
 </div>
@@ -89,7 +87,7 @@ window.onload = function(){
   {% for current_generation in result_data.generations %}
     var data = [];
     {% for current_item in current_generation %}
-      data.push({x: {{ current_item.fitness.0 }}, y: {{ current_item.fitness.1 }}});
+      data.push({x: {{ current_item.0 }}, y: {{ current_item.1 }}});
     {% endfor%}
     var item = {
       label: '{{ forloop.counter }}',

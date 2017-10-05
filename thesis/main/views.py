@@ -28,7 +28,7 @@ def run(request):
     result_data = differential_evolution(generations, data)
 
     for result in result_data['generations']:
-        result.sort(key=lambda x:x['fitness'][0])
+        result.sort(key=lambda x:x[0])
         # result = list(reversed(result))
 
     request.session['result_data'] = result_data
